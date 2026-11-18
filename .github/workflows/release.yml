@@ -6,8 +6,7 @@ on:
   push:
     tags: ['v*']
 
-permissions:
-  contents: write
+permissions: {}
 
 jobs:
   checks:
@@ -16,11 +15,15 @@ jobs:
   release:
     needs: checks
     runs-on: ubuntu-22.04
+    permissions:
+      contents: write
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - name: manifest.json version matches the tag
         run: bash scripts/version.sh check "$GITHUB_REF_NAME"
       - name: Publish
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --generate-notes
+        run: gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --title "$GITHUB_REF_NAME" --generate-notes

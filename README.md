@@ -192,7 +192,7 @@ Debug logging: `logger: logs: custom_components.lumo: debug`.
 Python 3.13 and the test harness of Home Assistant:
 
 ```sh
-pip install -r requirements_test.txt
+pip install -r requirements_test.txt -r requirements_lint.txt
 ruff check . && ruff format --check .
 pytest -q
 ```
