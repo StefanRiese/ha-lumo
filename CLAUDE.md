@@ -20,7 +20,8 @@ custom_components/lumo/   api.py (client + SSE), coordinator.py (data, live upda
 tests/                    pytest against tests/fake_server.py (invented data, no real server)
 scripts/version.sh        set/check the manifest version against a release tag
 hacs.json                 HACS metadata
-.github/workflows/        ci.yml (ruff + pytest), validate.yml (hassfest + HACS action), release.yml
+.github/workflows/        ci.yml (ruff, ShellCheck, pytest on the minimum and the latest Home Assistant),
+                          validate.yml (hassfest + HACS action), release.yml; dependabot.yml
 ```
 
 ## Commands
@@ -28,7 +29,7 @@ hacs.json                 HACS metadata
 Python 3.13 is needed (the system Python may be older: `uv venv --python 3.13`).
 
 ```sh
-pip install -r requirements_test.txt
+pip install -r requirements_test.txt -r requirements_lint.txt
 ruff check . && ruff format --check .    # CI requires both
 pytest -q
 ```
@@ -49,6 +50,10 @@ pytest -q
 - Never mention Claude in commits or PRs.
 
 ## Workflow
+
+- Workflow actions are pinned to commit SHAs (Dependabot updates them); keep `permissions` minimal
+  and `persist-credentials: false`. The oldest supported Home Assistant is `hacs.json`
+  (`homeassistant`) and the `minimum` entry of the test matrix in `ci.yml`: change both together.
 
 - Solo repository: work on `main` or a branch; commit only when the user asks.
 - Release: move *Unreleased* in `CHANGELOG.md` to a new version, `bash scripts/version.sh set

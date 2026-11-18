@@ -8,26 +8,49 @@ on:
     paths-ignore: ['**.md']
   workflow_call:
 
-permissions:
-  contents: read
+permissions: {}
 
 jobs:
-  test:
-    name: Lint + test
+  lint:
+    name: Lint
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: '3.13'
-      - run: pip install -r requirements_test.txt
+          cache: pip
+          cache-dependency-path: requirements_lint.txt
+      - run: pip install -r requirements_lint.txt
       - run: ruff check .
       - run: ruff format --check .
-      - run: pytest -q
-
-  scripts:
-    name: ShellCheck
-    runs-on: ubuntu-22.04
-    steps:
-      - uses: actions/checkout@v7
       - run: shellcheck -s bash scripts/version.sh
+
+  test:
+    name: Tests (${{ matrix.name }})
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # The oldest Home Assistant that hacs.json allows, and the newest one.
+          - name: HA 2026.2 (minimum)
+            python: '3.13'
+            harness: pytest-homeassistant-custom-component==0.13.316
+          - name: HA latest
+            python: '3.14'
+            harness: pytest-homeassistant-custom-component
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install the test harness
+        env:
+          HARNESS: ${{ matrix.harness }}
+        run: pip install "$HARNESS"
+      - run: pytest -q
