@@ -37,6 +37,13 @@
           "ssl": "Use HTTPS",
           "password": "Password"
         }
+      },
+      "discovery_confirm": {
+        "title": "Lumo server found",
+        "description": "A Lumo server was found at {host}:{port}. Enter the password of its web UI (not the Schulportal password).",
+        "data": {
+          "password": "Password"
+        }
       }
     },
     "error": {
@@ -51,7 +58,8 @@
       "already_configured": "This server is already set up.",
       "reauth_successful": "The password was updated.",
       "reconfigure_successful": "The server was updated.",
-      "wrong_server": "This is a different server than the configured one. Add it as a new entry instead."
+      "wrong_server": "This is a different server than the configured one. Add it as a new entry instead.",
+      "not_lumo": "The discovered service is not a Lumo server."
     }
   },
   "options": {

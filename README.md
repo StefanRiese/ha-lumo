@@ -27,7 +27,12 @@ cp -r custom_components/lumo /config/custom_components/
 
 ## Setup
 
-1. **Host, port, HTTPS and password** – the address of the Lumo server (e.g. `lumo.local`, port
+**Discovery:** a Lumo server installed with `install.sh` (Lumo 0.26 and later) announces itself
+as the mDNS service `_lumo._tcp`. Home Assistant then offers it under *Discovered*; you only
+enter the password. The desktop apps do not announce themselves, and mDNS does not cross
+VLANs: add the server by hand there.
+
+1. **Host, port, HTTPS and password** (manual setup) – the address of the Lumo server (e.g. `lumo.local`, port
    `8080`) and the password of its *web UI*. It is **not** the Schulportal password.
 2. **Children** – choose which children of the server appear in Home Assistant (skipped if the
    server has only one).

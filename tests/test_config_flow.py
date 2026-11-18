@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+from ipaddress import ip_address
 from urllib.parse import urlparse
 
 import pytest
-from homeassistant.config_entries import SOURCE_USER, ConfigEntryState
+from homeassistant.config_entries import SOURCE_USER, SOURCE_ZEROCONF, ConfigEntryState
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
 from pytest_homeassistant_custom_component.common import MockConfigEntry
@@ -318,3 +319,105 @@ async def test_vanished_account_is_skipped(hass: HomeAssistant, fake: tuple[Fake
     assert entry.state is ConfigEntryState.LOADED
     assert list(entry.runtime_data.coordinators) == ["k3x9ab"]
     await _unload(hass, entry)
+
+
+def _discovery(url: str, **overrides):
+    from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+
+    parsed = urlparse(url)
+    values = {
+        "ip_address": ip_address(parsed.hostname),
+        "ip_addresses": [ip_address(parsed.hostname)],
+        "hostname": "lumo.local.",
+        "name": "Lumo (lumo)._lumo._tcp.local.",
+        "port": parsed.port,
+        "properties": {"app": "lumo"},
+        "type": "_lumo._tcp.local.",
+    }
+    return ZeroconfServiceInfo(**{**values, **overrides})
+
+
+async def test_zeroconf_discovery_flow(hass: HomeAssistant, fake: tuple[FakeLumo, str]) -> None:
+    _, url = fake
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": SOURCE_ZEROCONF}, data=_discovery(url)
+    )
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "discovery_confirm"
+
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_PASSWORD: "wrong"}
+    )
+    assert result["errors"] == {"base": "invalid_auth"}
+
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_PASSWORD: PASSWORD}
+    )
+    assert result["step_id"] == "accounts"
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_ACCOUNTS: ["k3x9ab"]}
+    )
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    parsed = urlparse(url)
+    assert result["data"] == {
+        CONF_HOST: parsed.hostname,
+        CONF_PORT: parsed.port,
+        CONF_SSL: False,
+        CONF_PASSWORD: PASSWORD,
+    }
+    await hass.async_block_till_done()
+    await _unload(hass, result["result"])
+
+
+async def test_zeroconf_ignores_other_services(
+    hass: HomeAssistant, fake: tuple[FakeLumo, str]
+) -> None:
+    _, url = fake
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN,
+        context={"source": SOURCE_ZEROCONF},
+        data=_discovery(url, properties={"app": "other"}),
+    )
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "not_lumo"
+
+
+async def test_zeroconf_skips_server_set_up_by_name(
+    hass: HomeAssistant, fake: tuple[FakeLumo, str]
+) -> None:
+    _, url = fake
+    parsed = urlparse(url)
+    # typed in by hand with the mDNS name instead of the address
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={CONF_HOST: "Lumo.local", CONF_PORT: parsed.port, CONF_SSL: False, CONF_PASSWORD: "x"},
+        unique_id=f"lumo.local:{parsed.port}",
+    )
+    entry.add_to_hass(hass)
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": SOURCE_ZEROCONF}, data=_discovery(url)
+    )
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "already_configured"
+
+
+async def test_zeroconf_follows_a_new_address(hass: HomeAssistant) -> None:
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={CONF_HOST: "192.168.1.50", CONF_PORT: 8080, CONF_SSL: False, CONF_PASSWORD: "x"},
+        unique_id="192.168.1.50:8080",
+    )
+    entry.add_to_hass(hass)
+    info = _discovery("http://192.168.1.60:8080", hostname="other.local.")
+    # same unique id only for the same address: a new address is a new flow ...
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": SOURCE_ZEROCONF}, data=info
+    )
+    assert result["step_id"] == "discovery_confirm"
+    # ... and the same address is recognised
+    again = _discovery("http://192.168.1.50:8080", hostname="other.local.")
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": SOURCE_ZEROCONF}, data=again
+    )
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "already_configured"

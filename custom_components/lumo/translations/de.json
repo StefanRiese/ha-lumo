@@ -37,6 +37,13 @@
           "ssl": "HTTPS verwenden",
           "password": "Passwort"
         }
+      },
+      "discovery_confirm": {
+        "title": "Lumo-Server gefunden",
+        "description": "Ein Lumo-Server wurde unter {host}:{port} gefunden. Gib das Passwort seiner Weboberfläche ein (nicht das Schulportal-Passwort).",
+        "data": {
+          "password": "Passwort"
+        }
       }
     },
     "error": {
@@ -51,7 +58,8 @@
       "already_configured": "Dieser Server ist bereits eingerichtet.",
       "reauth_successful": "Das Passwort wurde aktualisiert.",
       "reconfigure_successful": "Der Server wurde aktualisiert.",
-      "wrong_server": "Das ist ein anderer Server als der eingerichtete. Füge ihn stattdessen als neuen Eintrag hinzu."
+      "wrong_server": "Das ist ein anderer Server als der eingerichtete. Füge ihn stattdessen als neuen Eintrag hinzu.",
+      "not_lumo": "Der gefundene Dienst ist kein Lumo-Server."
     }
   },
   "options": {

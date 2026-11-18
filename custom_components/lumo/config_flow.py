@@ -22,6 +22,7 @@ from homeassistant.helpers.selector import (
     SelectSelectorConfig,
     SelectSelectorMode,
 )
+from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from . import LumoConfigEntry, base_url
 from .api import (
@@ -130,6 +131,7 @@ class LumoConfigFlow(ConfigFlow, domain=DOMAIN):
     def __init__(self) -> None:
         self._connection: dict[str, Any] = {}
         self._accounts: list[dict[str, Any]] = []
+        self._discovered: dict[str, Any] = {}
 
     @staticmethod
     @callback
@@ -163,6 +165,54 @@ class LumoConfigFlow(ConfigFlow, domain=DOMAIN):
             data_schema=self.add_suggested_values_to_schema(
                 _connection_schema(user_input or {}), user_input
             ),
+            errors=errors,
+        )
+
+    # --- discovery (mDNS, `_lumo._tcp`) ----------------------------------------------
+
+    async def async_step_zeroconf(self, discovery_info: ZeroconfServiceInfo) -> ConfigFlowResult:
+        if discovery_info.properties.get("app") != "lumo":
+            return self.async_abort(reason="not_lumo")
+        host, port = discovery_info.host, discovery_info.port or DEFAULT_PORT
+        # An entry typed in by hand may use the name instead of the address.
+        names = {host.lower(), discovery_info.hostname.rstrip(".").lower()}
+        for entry in self._async_current_entries():
+            if entry.data[CONF_PORT] == port and entry.data[CONF_HOST].lower() in names:
+                return self.async_abort(reason="already_configured")
+        await self.async_set_unique_id(f"{host.lower()}:{port}")
+        # the same server with a new address (DHCP): follow it
+        self._abort_if_unique_id_configured(updates={CONF_HOST: host})
+        self._discovered = {CONF_HOST: host, CONF_PORT: port, CONF_SSL: False}
+        self.context["title_placeholders"] = {"host": host}
+        return await self.async_step_discovery_confirm()
+
+    async def async_step_discovery_confirm(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        errors: dict[str, str] = {}
+        host, port = self._discovered[CONF_HOST], self._discovered[CONF_PORT]
+        if user_input is not None:
+            try:
+                self._accounts = await validate_connection(
+                    host, port, False, user_input[CONF_PASSWORD]
+                )
+            except CannotValidate as err:
+                errors["base"] = err.reason
+            else:
+                if not self._accounts:
+                    errors["base"] = "no_accounts"
+                else:
+                    self._connection = {
+                        **self._discovered,
+                        CONF_PASSWORD: user_input[CONF_PASSWORD],
+                    }
+                    if len(self._accounts) == 1:
+                        return self._create([self._accounts[0]["id"]])
+                    return await self.async_step_accounts()
+        return self.async_show_form(
+            step_id="discovery_confirm",
+            data_schema=vol.Schema({vol.Required(CONF_PASSWORD): str}),
+            description_placeholders={"host": host, "port": str(port)},
             errors=errors,
         )
 
