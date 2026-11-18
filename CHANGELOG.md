@@ -4,10 +4,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning: [S
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-18
+
 ### Added
 - Binary sensor *Substitutions changed*: on for an hour after new or changed substitution entries.
 - Sensor *Next meal* with the list of the next ordered meals.
 - Option *Calendar*: show all entries, only exams or no exams.
+
+## [0.1.0] - 2026-11-18
 
 ### Added
 - First version, moved here from the Lumo repository: one device per child with sensors for
