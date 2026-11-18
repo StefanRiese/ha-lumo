@@ -4,6 +4,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning: [S
 
 ## [Unreleased]
 
+### Added
+- Automatic discovery of the Lumo server over mDNS (`_lumo._tcp`). A server that is set up
+  already is recognised by address or name; a discovered server with a new address follows it.
+
 ## [0.2.0] - 2026-11-18
 
 ### Added
