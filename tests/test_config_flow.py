@@ -274,9 +274,11 @@ async def test_options_flow_switches_and_reloads(
             CONF_ACCOUNTS: ["k3x9ab", "p7q2mz"],
             CONF_ENABLE_GRADES: True,
             CONF_ALLOW_HOMEWORK_WRITE: True,
+            "calendar_filter": "exams_only",
         },
     )
     assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert entry.options["calendar_filter"] == "exams_only"
     await hass.async_block_till_done()
 
     assert entry.state is ConfigEntryState.LOADED

@@ -61,12 +61,14 @@
         "data": {
           "accounts": "Children",
           "enable_grades": "Load grades",
-          "allow_homework_write": "Allow marking homework as done"
+          "allow_homework_write": "Allow marking homework as done",
+          "calendar_filter": "Calendar"
         },
         "data_description": {
           "accounts": "Children that appear in Home Assistant.",
           "enable_grades": "Off by default. Grades are personal data: only switch this on if you want them in Home Assistant (history, recorder).",
-          "allow_homework_write": "Off by default. Marking homework as done writes to the real Schulportal."
+          "allow_homework_write": "Off by default. Marking homework as done writes to the real Schulportal.",
+          "calendar_filter": "Which entries the school calendar shows. Exams are the categories „Klausuren“ and „Arbeiten“."
         }
       }
     }
@@ -94,6 +96,9 @@
       "meal_today": {
         "name": "Meal today"
       },
+      "meal_next": {
+        "name": "Next meal"
+      },
       "grades_count": {
         "name": "Grades"
       }
@@ -104,6 +109,9 @@
       },
       "cancelled_tomorrow": {
         "name": "Cancellation tomorrow"
+      },
+      "substitutions_changed": {
+        "name": "Substitutions changed"
       },
       "schulportal_connection": {
         "name": "Schulportal connection"
@@ -137,6 +145,15 @@
     "todo": {
       "homework": {
         "name": "Homework"
+      }
+    }
+  },
+  "selector": {
+    "calendar_filter": {
+      "options": {
+        "all": "All entries",
+        "exams_only": "Only exams",
+        "without_exams": "Without exams"
       }
     }
   }

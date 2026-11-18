@@ -14,8 +14,12 @@ from homeassistant.util import dt as dt_util
 from pytest_homeassistant_custom_component.common import MockConfigEntry, async_fire_time_changed
 
 from custom_components.lumo.const import (
+    CALENDAR_ALL,
+    CALENDAR_EXAMS_ONLY,
+    CALENDAR_WITHOUT_EXAMS,
     CONF_ACCOUNTS,
     CONF_ALLOW_HOMEWORK_WRITE,
+    CONF_CALENDAR_FILTER,
     CONF_ENABLE_GRADES,
     CONF_HOST,
     CONF_PASSWORD,
@@ -96,6 +100,16 @@ def populated(fake: tuple[FakeLumo, str]) -> FakeLumo:
             "place": "Aula",
             "category": "Termine",
         },
+        {
+            "id": "8",
+            "title": "Mathe-Klausur",
+            "description": "",
+            "allDay": True,
+            "start": f"{_iso(5)}T00:00:00.000",
+            "end": f"{_iso(5)}T00:00:00.000",
+            "place": None,
+            "category": "Klausuren",
+        },
     ]
     server.data["grades"] = [
         {
@@ -127,6 +141,24 @@ def populated(fake: tuple[FakeLumo, str]) -> FakeLumo:
                 "priceCents": 350,
                 "ordered": 0,
                 "deadlinePassed": False,
+            },
+            {
+                "date": _iso(2),
+                "line": "Menü 1",
+                "name": "Spaghetti",
+                "allergens": [],
+                "priceCents": 350,
+                "ordered": 1,
+                "deadlinePassed": False,
+            },
+            {
+                "date": _iso(-3),
+                "line": "Menü 1",
+                "name": "Alt",
+                "allergens": [],
+                "priceCents": 350,
+                "ordered": 1,
+                "deadlinePassed": True,
             },
         ],
     }
@@ -306,7 +338,7 @@ async def test_calendar_entity_and_events(hass: HomeAssistant, populated: FakeLu
     # within the synced range: no extra request
     populated.calendar_queries.clear()
     events = await _calendar_events(hass, state.entity_id, start, start + timedelta(days=30))
-    assert [e["summary"] for e in events] == ["Elternsprechtag"]
+    assert [e["summary"] for e in events] == ["Elternsprechtag", "Mathe-Klausur"]
     assert populated.calendar_queries == []
 
     # outside the synced range the server is asked for exactly that range
@@ -369,3 +401,57 @@ async def test_each_child_gets_a_device(hass: HomeAssistant, populated: FakeLumo
     server = by_name[f"Lumo ({entry.data[CONF_HOST]})"]
     assert by_name["Lumo Max"].via_device_id == server.id
     assert by_name["Lumo Anna"].via_device_id == server.id
+
+
+async def test_next_meal_sensor(hass: HomeAssistant, populated: FakeLumo, setup) -> None:
+    entry = await setup()
+    state = _state(hass, entry, "sensor", "meal_next")
+    assert state.state == "Gemüsemaultaschen"  # today's order comes first
+    assert state.attributes["deadline_passed"] is True
+    # only ordered meals from today on, in date order
+    assert [o["name"] for o in state.attributes["next_orders"]] == [
+        "Gemüsemaultaschen",
+        "Spaghetti",
+    ]
+
+
+async def test_substitutions_changed_binary_sensor(
+    hass: HomeAssistant, populated: FakeLumo, setup, freezer
+) -> None:
+    entry = await setup()
+    sensor = _state(hass, entry, "binary_sensor", "substitutions_changed")
+    assert sensor.state == "off"  # nothing changed since Home Assistant started
+
+    coordinator = entry.runtime_data.coordinators["k3x9ab"]
+    coordinator.substitutions_changed_at = dt_util.utcnow()
+    coordinator.substitution_changes = [{"kind": "substitution", "subject": "M"}]
+    coordinator.async_update_listeners()
+    await hass.async_block_till_done()
+    state = _state(hass, entry, "binary_sensor", "substitutions_changed")
+    assert state.state == "on"
+    assert state.attributes["changes"][0]["subject"] == "M"
+
+    freezer.tick(timedelta(hours=1, minutes=1))
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
+    assert _state(hass, entry, "binary_sensor", "substitutions_changed").state == "off"
+
+
+@pytest.mark.parametrize(
+    ("mode", "expected"),
+    [
+        (CALENDAR_ALL, {"Elternsprechtag", "Mathe-Klausur"}),
+        (CALENDAR_EXAMS_ONLY, {"Mathe-Klausur"}),
+        (CALENDAR_WITHOUT_EXAMS, {"Elternsprechtag"}),
+    ],
+)
+async def test_calendar_filter(
+    hass: HomeAssistant, populated: FakeLumo, setup, mode: str, expected: set[str]
+) -> None:
+    entry = await setup(**{CONF_CALENDAR_FILTER: mode})
+    state = _state(hass, entry, "calendar", "calendar")
+    start = dt_util.now()
+    events = await _calendar_events(hass, state.entity_id, start, start + timedelta(days=30))
+    assert {e["summary"] for e in events} == expected
+    # the entity state follows the filter too
+    assert state.attributes["message"] in expected

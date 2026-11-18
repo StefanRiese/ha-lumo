@@ -7,6 +7,8 @@ import re
 from datetime import date
 from typing import Any
 
+from .const import EXAM_CATEGORIES
+
 _BREAKS = re.compile(r"<\s*br\s*/?\s*>|<\s*/\s*(?:p|div|li|tr)\s*>", re.IGNORECASE)
 _TAGS = re.compile(r"<[^>]*>")
 
@@ -32,3 +34,9 @@ def is_cancellation(entry: dict[str, Any]) -> bool:
     """A substitution entry that cancels the lesson („Entfall“, „Fällt aus“)."""
     kind = str(entry.get("type") or "").lower()
     return "entfall" in kind or "fällt aus" in kind or "faellt aus" in kind
+
+
+def is_exam(entry: dict[str, Any]) -> bool:
+    """A calendar entry of an exam category („Klausuren“, „Arbeiten“)."""
+    category = str(entry.get("category") or "").lower()
+    return any(name in category for name in EXAM_CATEGORIES)

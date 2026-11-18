@@ -44,6 +44,7 @@ If the web password changes later, Home Assistant asks for the new one (*Repair*
 | Children | all chosen at setup | Children that appear in Home Assistant. |
 | Load grades | **off** | Creates the grades sensor and fetches grades. Grades are personal data – see [Privacy](#privacy). |
 | Allow marking homework as done | **off** | Lets the homework to-do list tick items off. This **writes to the real Schulportal**. |
+| Calendar | all entries | *All entries*, *Only exams* or *Without exams*. Exams are the calendar categories „Klausuren“ and „Arbeiten“. |
 
 Saving the options reloads the integration.
 
@@ -58,12 +59,13 @@ portal account does not have (the server reports them as disabled) get no entiti
 |---|---|---|
 | Substitutions today / tomorrow (`sensor`) | number of entries | `published` (the portal has published that day), `entries`, `notices`, `date` |
 | Cancellation today / tomorrow (`binary_sensor`) | on if a lesson is cancelled („Entfall“, „Fällt aus“) | `cancelled` (the entries) |
+| Substitutions changed (`binary_sensor`) | on for an hour after new or changed substitution entries arrived (only changes seen while Home Assistant runs) | `changed_at`, `changes` |
 | Open homework (`sensor`) | number of open tasks | `homework`: course, date, topic, description |
 | Homework (`todo`) | open items | description; ticking needs the option above |
 | Next lesson (`sensor`, timestamp) | start of the next lesson | `subject`, `room`, `teacher`, `end` |
 | First lesson tomorrow (`sensor`, timestamp) | start of the first lesson tomorrow, none on a free day | `subject`, `room`, `teacher`, `end` |
-| School calendar (`calendar`) | next or current event | – |
-| Meal balance, Meal today (`sensor`) | balance in EUR / ordered dish | `line`, `allergens`, `price` – only if Caseda is set up for the child |
+| School calendar (`calendar`) | next or current event (after the calendar option) | – |
+| Meal balance, Meal today, Next meal (`sensor`) | balance in EUR / ordered dish today / next ordered dish from today on | `line`, `allergens`, `price`; Next meal also `date`, `quantity`, `deadline_passed` and `next_orders` (all ordered meals) – only if Caseda is set up for the child |
 | Grades (`sensor`) | number of grades | `courses` – only with the option *Load grades* |
 | Refresh now (`button`) | – | Starts a sync of the child's data on the server |
 | Schulportal / Caseda / WebUntis connection (`binary_sensor`, diagnostic) | on if the server reaches the service | `state`, `detail`, `last_success`, `failures` |
