@@ -101,6 +101,34 @@ def _todays_meal(data: Data, now: datetime) -> dict[str, Any] | None:
     return None
 
 
+def _upcoming_meals(data: Data, now: datetime) -> list[dict[str, Any]]:
+    """Ordered meals from today on (the server lists the current and the next two weeks)."""
+    today = now.date().isoformat()
+    orders = [
+        o
+        for o in data["meals"].data.get("orders", [])
+        if (o.get("date") or "") >= today and (o.get("ordered") or 0) > 0
+    ]
+    return sorted(orders, key=lambda o: o.get("date") or "")
+
+
+def _meal_summary(order: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "date": order.get("date"),
+        "line": order.get("line"),
+        "name": order.get("name"),
+        "allergens": order.get("allergens"),
+        "price": None if order.get("priceCents") is None else order["priceCents"] / 100,
+        "quantity": order.get("ordered"),
+        "deadline_passed": order.get("deadlinePassed"),
+    }
+
+
+def _next_meal(data: Data, now: datetime) -> dict[str, Any] | None:
+    upcoming = _upcoming_meals(data, now)
+    return upcoming[0] if upcoming else None
+
+
 def _grade_courses(data: Data) -> list[dict[str, Any]]:
     return [c for c in data["grades"].data or [] if c.get("grades")]
 
@@ -183,6 +211,21 @@ SENSORS: tuple[LumoSensorDescription, ...] = (
             }
             if (meal := _todays_meal(d, now))
             else {}
+        ),
+        time_based=True,
+    ),
+    LumoSensorDescription(
+        key="meal_next",
+        data_key="meals",
+        translation_key="meal_next",
+        value_fn=lambda d, now: meal.get("name") if (meal := _next_meal(d, now)) else None,
+        attrs_fn=lambda d, now: (
+            {
+                **_meal_summary(meal),
+                "next_orders": [_meal_summary(o) for o in _upcoming_meals(d, now)],
+            }
+            if (meal := _next_meal(d, now))
+            else {"next_orders": []}
         ),
         time_based=True,
     ),

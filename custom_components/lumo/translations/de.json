@@ -61,12 +61,14 @@
         "data": {
           "accounts": "Kinder",
           "enable_grades": "Noten laden",
-          "allow_homework_write": "Hausaufgaben als erledigt markieren erlauben"
+          "allow_homework_write": "Hausaufgaben als erledigt markieren erlauben",
+          "calendar_filter": "Kalender"
         },
         "data_description": {
           "accounts": "Kinder, die in Home Assistant erscheinen.",
           "enable_grades": "Standardmäßig aus. Noten sind personenbezogene Daten: nur einschalten, wenn sie in Home Assistant (Verlauf, Recorder) landen sollen.",
-          "allow_homework_write": "Standardmäßig aus. Das Markieren schreibt ins echte Schulportal."
+          "allow_homework_write": "Standardmäßig aus. Das Markieren schreibt ins echte Schulportal.",
+          "calendar_filter": "Welche Einträge der Schulkalender zeigt. Klausuren sind die Kategorien „Klausuren“ und „Arbeiten“."
         }
       }
     }
@@ -94,6 +96,9 @@
       "meal_today": {
         "name": "Essen heute"
       },
+      "meal_next": {
+        "name": "Nächstes Essen"
+      },
       "grades_count": {
         "name": "Noten"
       }
@@ -104,6 +109,9 @@
       },
       "cancelled_tomorrow": {
         "name": "Entfall morgen"
+      },
+      "substitutions_changed": {
+        "name": "Vertretungsplan geändert"
       },
       "schulportal_connection": {
         "name": "Schulportal-Verbindung"
@@ -137,6 +145,15 @@
     "todo": {
       "homework": {
         "name": "Hausaufgaben"
+      }
+    }
+  },
+  "selector": {
+    "calendar_filter": {
+      "options": {
+        "all": "Alle Einträge",
+        "exams_only": "Nur Klausuren",
+        "without_exams": "Ohne Klausuren"
       }
     }
   }

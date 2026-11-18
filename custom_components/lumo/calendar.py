@@ -14,9 +14,15 @@ from homeassistant.util import dt as dt_util
 
 from . import LumoConfigEntry
 from .api import LumoError
+from .const import (
+    CALENDAR_ALL,
+    CALENDAR_EXAMS_ONLY,
+    CALENDAR_WITHOUT_EXAMS,
+    CONF_CALENDAR_FILTER,
+)
 from .coordinator import LumoCoordinator
 from .entity import LumoEntity, add_when_available
-from .util import html_to_text
+from .util import html_to_text, is_exam
 
 PARALLEL_UPDATES = 0
 
@@ -53,6 +59,15 @@ def to_event(entry: dict[str, Any]) -> CalendarEvent | None:
     )
 
 
+def filter_entries(entries: list[dict[str, Any]], mode: str) -> list[dict[str, Any]]:
+    """Applies the option "calendar filter": all, only exams or without exams."""
+    if mode == CALENDAR_EXAMS_ONLY:
+        return [e for e in entries if is_exam(e)]
+    if mode == CALENDAR_WITHOUT_EXAMS:
+        return [e for e in entries if not is_exam(e)]
+    return entries
+
+
 async def async_setup_entry(
     hass: HomeAssistant, entry: LumoConfigEntry, async_add_entities: AddConfigEntryEntitiesCallback
 ) -> None:
@@ -72,12 +87,13 @@ class LumoCalendar(LumoEntity, CalendarEntity):
 
     def __init__(self, coordinator: LumoCoordinator, entry: ConfigEntry) -> None:
         super().__init__(coordinator, entry, "calendar", "calendar")
+        self._filter: str = entry.options.get(CONF_CALENDAR_FILTER, CALENDAR_ALL)
 
     @property
     def event(self) -> CalendarEvent | None:
         now = dt_util.now()
         upcoming: list[CalendarEvent] = []
-        for raw in self.payload or []:
+        for raw in filter_entries(list(self.payload or []), self._filter):
             event = to_event(raw)
             if event is None:
                 continue
@@ -109,7 +125,9 @@ class LumoCalendar(LumoEntity, CalendarEntity):
             except LumoError as err:
                 raise HomeAssistantError(f"Lumo calendar not available: {err}") from err
             raw = list(envelope.data or [])
-        events = [e for item in raw if (e := to_event(item)) is not None]
+        events = [
+            e for item in filter_entries(raw, self._filter) if (e := to_event(item)) is not None
+        ]
         begin, finish = dt_util.as_local(start_date), dt_util.as_local(end_date)
         return [
             e for e in events if e.start_datetime_local < finish and e.end_datetime_local > begin

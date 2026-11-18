@@ -5,12 +5,14 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import logging
+from datetime import datetime
 from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed, HomeAssistantError
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.util import dt as dt_util
 
 from .api import (
     Envelope,
@@ -87,6 +89,9 @@ class LumoCoordinator(DataUpdateCoordinator[LumoData]):
         self._pending: set[str] = set()
         self._flush_handle: asyncio.TimerHandle | None = None
         self._events_task: asyncio.Task[None] | None = None
+        # When new or changed substitution entries were seen last (this run only).
+        self.substitutions_changed_at: datetime | None = None
+        self.substitution_changes: list[dict[str, Any]] = []
 
     @property
     def account_name(self) -> str:
@@ -216,6 +221,10 @@ class LumoCoordinator(DataUpdateCoordinator[LumoData]):
         if self.data is None:  # first load: everything would be "new"
             return
         items = new_items(self.data, data)
+        changes = [i for i in items if i["kind"] == "substitution"]
+        if changes:
+            self.substitutions_changed_at = dt_util.utcnow()
+            self.substitution_changes = changes
         if len(items) > MAX_EVENTS_PER_UPDATE:
             _LOGGER.debug("%d new items, firing the first %d", len(items), MAX_EVENTS_PER_UPDATE)
         for item in items[:MAX_EVENTS_PER_UPDATE]:

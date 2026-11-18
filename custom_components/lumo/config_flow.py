@@ -17,6 +17,11 @@ from homeassistant.config_entries import (
 )
 from homeassistant.core import callback
 from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers.selector import (
+    SelectSelector,
+    SelectSelectorConfig,
+    SelectSelectorMode,
+)
 
 from . import LumoConfigEntry, base_url
 from .api import (
@@ -28,8 +33,11 @@ from .api import (
     LumoSetupRequiredError,
 )
 from .const import (
+    CALENDAR_ALL,
+    CALENDAR_FILTERS,
     CONF_ACCOUNTS,
     CONF_ALLOW_HOMEWORK_WRITE,
+    CONF_CALENDAR_FILTER,
     CONF_ENABLE_GRADES,
     CONF_HOST,
     CONF_PASSWORD,
@@ -261,6 +269,13 @@ class LumoOptionsFlow(OptionsFlow):
                 vol.Required(CONF_ACCOUNTS): vol.All(cv.multi_select(names), vol.Length(min=1)),
                 vol.Required(CONF_ENABLE_GRADES): bool,
                 vol.Required(CONF_ALLOW_HOMEWORK_WRITE): bool,
+                vol.Required(CONF_CALENDAR_FILTER, default=CALENDAR_ALL): SelectSelector(
+                    SelectSelectorConfig(
+                        options=list(CALENDAR_FILTERS),
+                        translation_key=CONF_CALENDAR_FILTER,
+                        mode=SelectSelectorMode.DROPDOWN,
+                    )
+                ),
             }
         )
         return self.async_show_form(
@@ -271,6 +286,7 @@ class LumoOptionsFlow(OptionsFlow):
                     CONF_ACCOUNTS: selected,
                     CONF_ENABLE_GRADES: entry.options.get(CONF_ENABLE_GRADES, False),
                     CONF_ALLOW_HOMEWORK_WRITE: entry.options.get(CONF_ALLOW_HOMEWORK_WRITE, False),
+                    CONF_CALENDAR_FILTER: entry.options.get(CONF_CALENDAR_FILTER, CALENDAR_ALL),
                 },
             ),
         )

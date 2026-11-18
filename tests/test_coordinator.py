@@ -207,3 +207,22 @@ async def test_refresh_portal(fake: tuple[FakeLumo, str], make: Make) -> None:
     coordinator = await make()
     await coordinator.async_refresh_portal()
     assert ("POST", "refresh") in server.requests
+
+
+async def test_substitution_change_is_remembered(fake: tuple[FakeLumo, str], make: Make) -> None:
+    server, _ = fake
+    coordinator = await make()
+    assert coordinator.substitutions_changed_at is None  # the first load is no change
+    coordinator.start_events()
+    await _until(lambda: server.event_streams == 1)
+
+    server.data["substitutions"] = [
+        {
+            "date": "2026-11-10",
+            "entries": [{"period": "1", "type": "Entfall", "subject": "M"}],
+            "notices": [],
+        }
+    ]
+    server.push("update", {"key": "substitutions", "fetchedAt": "t"})
+    await _until(lambda: coordinator.substitutions_changed_at is not None)
+    assert coordinator.substitution_changes[0]["subject"] == "M"

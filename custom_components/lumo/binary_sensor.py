@@ -19,6 +19,7 @@ from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.util import dt as dt_util
 
 from . import LumoConfigEntry
+from .const import SUBSTITUTIONS_CHANGED_FOR
 from .coordinator import LumoCoordinator, LumoStatusCoordinator
 from .entity import LumoEntity, LumoServerEntity, add_when_available
 from .util import day_entry, is_cancellation
@@ -83,6 +84,42 @@ class LumoCancellationSensor(LumoEntity, BinarySensorEntity):
         cancelled = _cancelled(self.coordinator.data, dt_util.now(), self.entity_description.offset)
         return self.freshness() | {
             "cancelled": [{k: v for k, v in e.items() if v not in (None, "")} for e in cancelled]
+        }
+
+
+class LumoSubstitutionsChangedSensor(LumoEntity, BinarySensorEntity):
+    """On for an hour after new or changed substitution entries arrived.
+
+    Only changes seen while Home Assistant runs count (the first load is no change).
+    """
+
+    def __init__(self, coordinator: LumoCoordinator, entry: ConfigEntry) -> None:
+        super().__init__(coordinator, entry, "substitutions_changed", "substitutions")
+
+    async def async_added_to_hass(self) -> None:
+        await super().async_added_to_hass()
+
+        @callback
+        def _tick(_now: datetime) -> None:
+            self.async_write_ha_state()  # switches off when the hour is over
+
+        self.async_on_remove(async_track_time_interval(self.hass, _tick, timedelta(minutes=1)))
+
+    @property
+    def is_on(self) -> bool | None:
+        if self.envelope is None:
+            return None
+        changed = self.coordinator.substitutions_changed_at
+        return changed is not None and dt_util.utcnow() - changed < SUBSTITUTIONS_CHANGED_FOR
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any] | None:
+        if self.envelope is None:
+            return None
+        changed = self.coordinator.substitutions_changed_at
+        return self.freshness() | {
+            "changed_at": None if changed is None else changed.isoformat(),
+            "changes": self.coordinator.substitution_changes,
         }
 
 
@@ -222,11 +259,18 @@ async def async_setup_entry(
             entry,
             async_add_entities,
             coordinator,
-            lambda c: [
-                LumoCancellationSensor(c, entry, description)
-                for description in CANCELLATIONS
-                if c.data and c.data.get("substitutions") is not None
-            ],
+            lambda c: (
+                [
+                    LumoCancellationSensor(c, entry, description)
+                    for description in CANCELLATIONS
+                    if c.data and c.data.get("substitutions") is not None
+                ]
+                + (
+                    [LumoSubstitutionsChangedSensor(c, entry)]
+                    if c.data and c.data.get("substitutions") is not None
+                    else []
+                )
+            ),
         )
 
         def build_services(

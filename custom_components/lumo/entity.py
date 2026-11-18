@@ -44,7 +44,16 @@ class LumoEntity(CoordinatorEntity[LumoCoordinator]):
     _attr_has_entity_name = True
     # Lists of lessons, homework, grades, … are large and personal: not for the recorder.
     _unrecorded_attributes = frozenset(
-        {"entries", "notices", "homework", "courses", "orders", "cancelled", "next_orders"}
+        {
+            "entries",
+            "notices",
+            "homework",
+            "courses",
+            "orders",
+            "cancelled",
+            "next_orders",
+            "changes",
+        }
     )
 
     def __init__(

@@ -16,11 +16,23 @@ CONF_ACCOUNTS: Final = "accounts"
 # Options. Both are off by default.
 CONF_ENABLE_GRADES: Final = "enable_grades"
 CONF_ALLOW_HOMEWORK_WRITE: Final = "allow_homework_write"
+CONF_CALENDAR_FILTER: Final = "calendar_filter"
+
+# Calendar filter (option): which entries the calendar entity shows.
+CALENDAR_ALL: Final = "all"
+CALENDAR_EXAMS_ONLY: Final = "exams_only"
+CALENDAR_WITHOUT_EXAMS: Final = "without_exams"
+CALENDAR_FILTERS: Final = (CALENDAR_ALL, CALENDAR_EXAMS_ONLY, CALENDAR_WITHOUT_EXAMS)
+# Calendar categories that count as exams (part of the name, case-insensitive; like the
+# server's `kategorie` filter).
+EXAM_CATEGORIES: Final = ("klausur", "arbeit")
 
 DEFAULT_PORT: Final = 8080
 
 # Fired on the event bus for every new substitution entry, homework or (opt-in) grade.
 EVENT_NEW_ITEM: Final = "lumo_new_item"
+# The "substitutions changed" binary sensor stays on this long after a change.
+SUBSTITUTIONS_CHANGED_FOR: Final = timedelta(hours=1)
 # Upper limit per update, so a freshly published plan cannot flood the bus.
 MAX_EVENTS_PER_UPDATE: Final = 25
 

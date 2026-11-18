@@ -5,6 +5,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning: [S
 ## [Unreleased]
 
 ### Added
+- Binary sensor *Substitutions changed*: on for an hour after new or changed substitution entries.
+- Sensor *Next meal* with the list of the next ordered meals.
+- Option *Calendar*: show all entries, only exams or no exams.
+
+### Added
 - First version, moved here from the Lumo repository: one device per child with sensors for
   substitutions, cancellations, open homework and the next lessons, a school calendar, a homework
   to-do list, school meals (with Caseda), connection diagnostics and an update hint. Changes
