@@ -4,6 +4,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning: [S
 
 ## [Unreleased]
 
+### Added
+- The Lumo icon (`brand/`): Home Assistant 2026.3 and later show it for the integration instead
+  of the placeholder.
+
 ## [0.3.0] - 2026-11-18
 
 ### Added
