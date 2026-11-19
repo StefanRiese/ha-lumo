@@ -239,11 +239,16 @@ async def test_reconfigure_flow(hass: HomeAssistant, fake: tuple[FakeLumo, str])
 
     result = await entry.start_reconfigure_flow(hass)
     assert result["step_id"] == "reconfigure"
-    # a different server is refused
-    other = {**_conn(url), CONF_HOST: "localhost"}
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], other)
-    assert result["type"] is FlowResultType.ABORT
-    assert result["reason"] == "wrong_server"
+    # a different server (another port) is refused
+    second = FakeLumo()
+    other_url = await second.start()
+    try:
+        other = _conn(other_url)
+        result = await hass.config_entries.flow.async_configure(result["flow_id"], other)
+        assert result["type"] is FlowResultType.ABORT
+        assert result["reason"] == "wrong_server"
+    finally:
+        await second.stop()
 
     result = await entry.start_reconfigure_flow(hass)
     new_password = {**_conn(url), CONF_SSL: False}
