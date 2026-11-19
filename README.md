@@ -2,6 +2,15 @@
 
 # Lumo for Home Assistant
 
+<p align="center">
+  <a href="https://github.com/StefanRiese/ha-lumo/actions/workflows/ci.yml"><img src="https://github.com/StefanRiese/ha-lumo/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/StefanRiese/ha-lumo/actions/workflows/validate.yml"><img src="https://github.com/StefanRiese/ha-lumo/actions/workflows/validate.yml/badge.svg" alt="Validate (hassfest, HACS)"></a>
+  <a href="https://github.com/StefanRiese/ha-lumo/releases/latest"><img src="https://img.shields.io/github/v/release/StefanRiese/ha-lumo" alt="Latest release"></a>
+  <a href="https://hacs.xyz/docs/faq/custom_repositories"><img src="https://img.shields.io/badge/HACS-Custom-orange.svg" alt="HACS custom repository"></a>
+  <img src="https://img.shields.io/badge/Home%20Assistant-2026.2%2B-41BDF5.svg" alt="Home Assistant 2026.2+">
+  <a href="https://github.com/StefanRiese/ha-lumo/blob/main/LICENSE"><img src="https://img.shields.io/github/license/StefanRiese/ha-lumo" alt="License GPL-3.0"></a>
+</p>
+
 A custom integration that shows the data of a [Lumo](https://github.com/StefanRiese/lumo) server in Home Assistant:
 substitutions, homework, next lessons, school calendar, school meals (Caseda), and – if you want
 it – grades. It talks to the [REST API](https://github.com/StefanRiese/lumo/blob/main/docs/API.md) of your own Lumo server; it never contacts
