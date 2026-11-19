@@ -26,7 +26,7 @@ jobs:
       - run: pip install -r requirements_lint.txt
       - run: ruff check .
       - run: ruff format --check .
-      - run: shellcheck -s bash scripts/version.sh
+      - run: shellcheck -s bash scripts/*.sh
 
   test:
     name: Tests (${{ matrix.name }})

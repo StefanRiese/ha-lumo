@@ -1,7 +1,8 @@
 name: Release
 
 # Push a tag like v0.2.0: checks that manifest.json carries the same version (HACS installs the
-# repository at the tag) and publishes a GitHub release.
+# repository at the tag) and publishes a GitHub release whose notes are the version's section
+# of CHANGELOG.md (the release fails if there is none).
 on:
   push:
     tags: ['v*']
@@ -21,9 +22,14 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          fetch-depth: 0 # the notes link to the previous tag
       - name: manifest.json version matches the tag
         run: bash scripts/version.sh check "$GITHUB_REF_NAME"
+      - name: Release notes from CHANGELOG.md
+        run: bash scripts/release-notes.sh "$GITHUB_REF_NAME" > "$RUNNER_TEMP/notes.md"
       - name: Publish
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --title "$GITHUB_REF_NAME" --generate-notes
+        run: |
+          gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" \
+            --title "$GITHUB_REF_NAME" --notes-file "$RUNNER_TEMP/notes.md"
