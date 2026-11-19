@@ -1,4 +1,4 @@
-<p align="center"><img src="https://raw.githubusercontent.com/StefanRiese/ha-lumo/main/custom_components/lumo/brand/icon@2x.png" alt="Lumo" width="128" height="128"></p>
+<p align="center"><img src="custom_components/lumo/brand/icon@2x.png" alt="Lumo" width="128" height="128"></p>
 
 # Lumo for Home Assistant
 
