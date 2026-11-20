@@ -81,6 +81,7 @@ portal account does not have (the server reports them as disabled) get no entiti
 | Next lesson (`sensor`, timestamp) | start of the next lesson | `subject`, `room`, `teacher`, `end` |
 | First lesson tomorrow (`sensor`, timestamp) | start of the first lesson tomorrow, none on a free day | `subject`, `room`, `teacher`, `end` |
 | School calendar (`calendar`) | next or current event (after the calendar option) | – |
+| School exams (`calendar_exams`) | next or current exam, always only exams | – |
 | Meal balance, Meal today, Next meal (`sensor`) | balance in EUR / ordered dish today / next ordered dish from today on | `line`, `allergens`, `price`; Next meal also `date`, `quantity`, `deadline_passed` and `next_orders` (all ordered meals) – only if Caseda is set up for the child |
 | Grades (`sensor`) | number of grades | `courses` – only with the option *Load grades* |
 | Refresh now (`button`) | – | Starts a sync of the child's data on the server |

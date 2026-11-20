@@ -455,3 +455,16 @@ async def test_calendar_filter(
     assert {e["summary"] for e in events} == expected
     # the entity state follows the filter too
     assert state.attributes["message"] in expected
+
+
+async def test_exams_calendar_shows_only_exams(
+    hass: HomeAssistant, populated: FakeLumo, setup
+) -> None:
+    # independent of the option: the main calendar keeps everything, the exams one filters
+    entry = await setup(**{CONF_CALENDAR_FILTER: CALENDAR_ALL})
+    exams = _state(hass, entry, "calendar", "calendar_exams")
+    assert exams is not None
+    start = dt_util.now()
+    events = await _calendar_events(hass, exams.entity_id, start, start + timedelta(days=30))
+    assert {e["summary"] for e in events} == {"Mathe-Klausur"}
+    assert exams.attributes["message"] == "Mathe-Klausur"

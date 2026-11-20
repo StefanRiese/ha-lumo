@@ -77,17 +77,32 @@ async def async_setup_entry(
             async_add_entities,
             coordinator,
             lambda c: (
-                [LumoCalendar(c, entry)] if c.data and c.data.get("calendar") is not None else []
+                [
+                    LumoCalendar(c, entry),
+                    LumoCalendar(c, entry, key="calendar_exams", mode=CALENDAR_EXAMS_ONLY),
+                ]
+                if c.data and c.data.get("calendar") is not None
+                else []
             ),
         )
 
 
 class LumoCalendar(LumoEntity, CalendarEntity):
-    """The school calendar; the next or current event is the entity state."""
+    """The school calendar; the next or current event is the entity state.
 
-    def __init__(self, coordinator: LumoCoordinator, entry: ConfigEntry) -> None:
-        super().__init__(coordinator, entry, "calendar", "calendar")
-        self._filter: str = entry.options.get(CONF_CALENDAR_FILTER, CALENDAR_ALL)
+    `mode` fixes the filter (the extra exams calendar); without it the option "calendar
+    filter" decides.
+    """
+
+    def __init__(
+        self,
+        coordinator: LumoCoordinator,
+        entry: ConfigEntry,
+        key: str = "calendar",
+        mode: str | None = None,
+    ) -> None:
+        super().__init__(coordinator, entry, key, "calendar")
+        self._filter: str = mode or entry.options.get(CONF_CALENDAR_FILTER, CALENDAR_ALL)
 
     @property
     def event(self) -> CalendarEvent | None:

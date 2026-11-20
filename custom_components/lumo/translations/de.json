@@ -143,6 +143,9 @@
     "calendar": {
       "calendar": {
         "name": "Schulkalender"
+      },
+      "calendar_exams": {
+        "name": "Klausuren und Arbeiten"
       }
     },
     "button": {

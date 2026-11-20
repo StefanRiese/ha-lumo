@@ -143,6 +143,9 @@
     "calendar": {
       "calendar": {
         "name": "School calendar"
+      },
+      "calendar_exams": {
+        "name": "School exams"
       }
     },
     "button": {
