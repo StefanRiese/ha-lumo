@@ -139,6 +139,46 @@ automation:
 
 ```yaml
 automation:
+  - alias: "Max: new homework"
+    triggers:
+      - trigger: event
+        event_type: lumo_new_item
+        event_data:
+          kind: homework
+          account_name: Max
+    actions:
+      - action: notify.mobile_app_phone
+        data:
+          title: "New homework (Max)"
+          message: >
+            {{ trigger.event.data.course }}
+            {% if trigger.event.data.date %}(due {{ trigger.event.data.date }}){% endif %}:
+            {{ trigger.event.data.topic or '' }}
+            {% if trigger.event.data.description %}– {{ trigger.event.data.description }}{% endif %}
+```
+
+```yaml
+# Needs the option "Load grades"
+automation:
+  - alias: "Max: new grade"
+    triggers:
+      - trigger: event
+        event_type: lumo_new_item
+        event_data:
+          kind: grade
+          account_name: Max
+    actions:
+      - action: notify.mobile_app_phone
+        data:
+          title: "New grade (Max)"
+          message: >
+            {{ trigger.event.data.course }}: {{ trigger.event.data.name or 'Grade' }}
+            {% if trigger.event.data.date %}({{ trigger.event.data.date }}){% endif %}
+            – {{ trigger.event.data.mark }}
+```
+
+```yaml
+automation:
   - alias: Max: first lesson tomorrow
     triggers:
       - trigger: time
