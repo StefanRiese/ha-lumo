@@ -4,10 +4,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning: [S
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-20
+
 ### Added
-- A third calendar entity with only the category „Arbeiten“ (class tests, without „Klausuren“).
 - A second calendar entity with only the exams („Klausuren und Arbeiten“), independent of the
   calendar option, so a dashboard can show both calendars and switch between them.
+- A third calendar entity with only the category „Arbeiten“ (class tests, without „Klausuren“).
 
 ## [0.3.1] - 2026-11-19
 
