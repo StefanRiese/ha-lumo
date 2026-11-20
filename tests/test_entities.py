@@ -468,3 +468,26 @@ async def test_exams_calendar_shows_only_exams(
     events = await _calendar_events(hass, exams.entity_id, start, start + timedelta(days=30))
     assert {e["summary"] for e in events} == {"Mathe-Klausur"}
     assert exams.attributes["message"] == "Mathe-Klausur"
+
+
+async def test_arbeiten_calendar_shows_only_arbeiten(
+    hass: HomeAssistant, populated: FakeLumo, setup
+) -> None:
+    populated.data["calendar"].append(
+        {
+            "id": "9",
+            "title": "Englisch Arbeit",
+            "description": "",
+            "allDay": True,
+            "start": f"{_iso(4)}T00:00:00.000",
+            "end": f"{_iso(4)}T00:00:00.000",
+            "place": None,
+            "category": "Arbeiten",
+        }
+    )
+    entry = await setup()
+    arbeiten = _state(hass, entry, "calendar", "calendar_arbeiten")
+    assert arbeiten is not None
+    start = dt_util.now()
+    events = await _calendar_events(hass, arbeiten.entity_id, start, start + timedelta(days=30))
+    assert {e["summary"] for e in events} == {"Englisch Arbeit"}  # not the Klausur

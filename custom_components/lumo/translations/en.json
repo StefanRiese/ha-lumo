@@ -146,6 +146,9 @@
       },
       "calendar_exams": {
         "name": "School exams"
+      },
+      "calendar_arbeiten": {
+        "name": "School tests (Arbeiten)"
       }
     },
     "button": {

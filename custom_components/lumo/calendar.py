@@ -16,13 +16,14 @@ from . import LumoConfigEntry
 from .api import LumoError
 from .const import (
     CALENDAR_ALL,
+    CALENDAR_ARBEITEN_ONLY,
     CALENDAR_EXAMS_ONLY,
     CALENDAR_WITHOUT_EXAMS,
     CONF_CALENDAR_FILTER,
 )
 from .coordinator import LumoCoordinator
 from .entity import LumoEntity, add_when_available
-from .util import html_to_text, is_exam
+from .util import html_to_text, is_arbeit, is_exam
 
 PARALLEL_UPDATES = 0
 
@@ -61,6 +62,8 @@ def to_event(entry: dict[str, Any]) -> CalendarEvent | None:
 
 def filter_entries(entries: list[dict[str, Any]], mode: str) -> list[dict[str, Any]]:
     """Applies the option "calendar filter": all, only exams or without exams."""
+    if mode == CALENDAR_ARBEITEN_ONLY:
+        return [e for e in entries if is_arbeit(e)]
     if mode == CALENDAR_EXAMS_ONLY:
         return [e for e in entries if is_exam(e)]
     if mode == CALENDAR_WITHOUT_EXAMS:
@@ -80,6 +83,7 @@ async def async_setup_entry(
                 [
                     LumoCalendar(c, entry),
                     LumoCalendar(c, entry, key="calendar_exams", mode=CALENDAR_EXAMS_ONLY),
+                    LumoCalendar(c, entry, key="calendar_arbeiten", mode=CALENDAR_ARBEITEN_ONLY),
                 ]
                 if c.data and c.data.get("calendar") is not None
                 else []
@@ -90,8 +94,8 @@ async def async_setup_entry(
 class LumoCalendar(LumoEntity, CalendarEntity):
     """The school calendar; the next or current event is the entity state.
 
-    `mode` fixes the filter (the extra exams calendar); without it the option "calendar
-    filter" decides.
+    `mode` fixes the filter (the extra exams and Arbeiten calendars); without it the option
+    "calendar filter" decides.
     """
 
     def __init__(

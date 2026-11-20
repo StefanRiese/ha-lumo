@@ -26,6 +26,9 @@ CALENDAR_FILTERS: Final = (CALENDAR_ALL, CALENDAR_EXAMS_ONLY, CALENDAR_WITHOUT_E
 # Calendar categories that count as exams (part of the name, case-insensitive; like the
 # server's `kategorie` filter).
 EXAM_CATEGORIES: Final = ("klausur", "arbeit")
+# Only for the extra "Arbeiten" calendar entity (not an option of the integration).
+CALENDAR_ARBEITEN_ONLY: Final = "arbeiten_only"
+ARBEITEN_CATEGORY: Final = "arbeit"
 
 DEFAULT_PORT: Final = 8080
 

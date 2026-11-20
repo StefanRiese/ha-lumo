@@ -7,7 +7,7 @@ import re
 from datetime import date
 from typing import Any
 
-from .const import EXAM_CATEGORIES
+from .const import ARBEITEN_CATEGORY, EXAM_CATEGORIES
 
 _BREAKS = re.compile(r"<\s*br\s*/?\s*>|<\s*/\s*(?:p|div|li|tr)\s*>", re.IGNORECASE)
 _TAGS = re.compile(r"<[^>]*>")
@@ -40,3 +40,8 @@ def is_exam(entry: dict[str, Any]) -> bool:
     """A calendar entry of an exam category („Klausuren“, „Arbeiten“)."""
     category = str(entry.get("category") or "").lower()
     return any(name in category for name in EXAM_CATEGORIES)
+
+
+def is_arbeit(entry: dict[str, Any]) -> bool:
+    """A calendar entry of the category „Arbeiten“ (class tests), not „Klausuren“."""
+    return ARBEITEN_CATEGORY in str(entry.get("category") or "").lower()

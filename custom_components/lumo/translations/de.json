@@ -146,6 +146,9 @@
       },
       "calendar_exams": {
         "name": "Klausuren und Arbeiten"
+      },
+      "calendar_arbeiten": {
+        "name": "Arbeiten"
       }
     },
     "button": {
