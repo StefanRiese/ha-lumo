@@ -23,6 +23,8 @@ def server_device(entry: ConfigEntry) -> DeviceInfo:
         name=f"Lumo ({entry.data[CONF_HOST]})",
         manufacturer="Lumo",
         entry_type=DeviceEntryType.SERVICE,
+        # The identity of the server; an entry from before the ids still has its address here.
+        serial_number=entry.unique_id if entry.unique_id and ":" not in entry.unique_id else None,
     )
 
 

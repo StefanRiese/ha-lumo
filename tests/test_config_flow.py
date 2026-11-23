@@ -9,6 +9,7 @@ import pytest
 from homeassistant.config_entries import SOURCE_USER, SOURCE_ZEROCONF, ConfigEntryState
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
+from homeassistant.helpers import device_registry as dr
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.lumo.config_flow import normalize_host
@@ -226,6 +227,9 @@ async def test_setup_adopts_the_server_id(hass: HomeAssistant, fake: tuple[FakeL
     await hass.config_entries.async_setup(entry.entry_id)
     await hass.async_block_till_done()
     assert entry.unique_id == server.server_id
+    device = dr.async_get(hass).async_get_device(identifiers={(DOMAIN, entry.entry_id)})
+    assert device is not None
+    assert device.serial_number == server.server_id  # shown on the device page
     await _unload(hass, entry)
 
 

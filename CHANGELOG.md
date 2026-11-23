@@ -4,6 +4,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning: [S
 
 ## [Unreleased]
 
+## [0.5.2] - 2026-11-23
+
+### Added
+- The identity (UUID) of the Lumo server is shown as the serial number on the device page of the
+  server (Lumo 0.27 and later).
+
 ## [0.5.1] - 2026-11-23
 
 ### Fixed
