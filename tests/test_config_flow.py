@@ -227,9 +227,9 @@ async def test_setup_adopts_the_server_id(hass: HomeAssistant, fake: tuple[FakeL
     await hass.config_entries.async_setup(entry.entry_id)
     await hass.async_block_till_done()
     assert entry.unique_id == server.server_id
-    device = dr.async_get(hass).async_get_device(identifiers={(DOMAIN, entry.entry_id)})
-    assert device is not None
-    assert device.serial_number == server.server_id  # shown on the device page
+    devices = dr.async_entries_for_config_entry(dr.async_get(hass), entry.entry_id)
+    serials = {d.serial_number for d in devices if (DOMAIN, entry.entry_id) in d.identifiers}
+    assert serials == {server.server_id}  # shown on the device page
     await _unload(hass, entry)
 
 
