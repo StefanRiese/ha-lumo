@@ -419,6 +419,21 @@ async def test_vanished_account_is_skipped(hass: HomeAssistant, fake: tuple[Fake
     await _unload(hass, entry)
 
 
+@pytest.fixture(autouse=True)
+def no_healthz_lookup(monkeypatch: pytest.MonkeyPatch) -> dict[str, str | None]:
+    """Discovery asks the announced address for its id; the test addresses do not exist.
+
+    Maps `host:port` to the id answered there (default: none, an older server).
+    """
+    answers: dict[str, str | None] = {}
+
+    async def fetch(host: str, port: int, ssl: bool) -> str | None:
+        return answers.get(f"{host}:{port}")
+
+    monkeypatch.setattr("custom_components.lumo.config_flow.fetch_server_id", fetch)
+    return answers
+
+
 def _discovery(url: str, **overrides):
     from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
@@ -587,3 +602,53 @@ async def test_zeroconf_follows_a_new_address(hass: HomeAssistant) -> None:
     )
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"
+
+
+async def test_zeroconf_without_id_in_the_announcement_asks_the_server(
+    hass: HomeAssistant, no_healthz_lookup: dict[str, str | None]
+) -> None:
+    server_id = "0b9b6f1e-2c1d-4c55-9a52-5d2f6a3f3a11"
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={CONF_HOST: "192.168.1.24", CONF_PORT: 8080, CONF_SSL: False, CONF_PASSWORD: "x"},
+        unique_id=server_id,
+    )
+    entry.add_to_hass(hass)
+    no_healthz_lookup["fd00::24:8080"] = server_id
+    info = _discovery(
+        "http://[fd00::24]:8080",
+        ip_address=ip_address("fd00::24"),
+        ip_addresses=[ip_address("fd00::24")],
+        hostname="other.local.",
+    )
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": SOURCE_ZEROCONF}, data=info
+    )
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "already_configured"
+
+
+async def test_zeroconf_adopts_an_entry_that_still_has_its_address_as_id(
+    hass: HomeAssistant, no_healthz_lookup: dict[str, str | None]
+) -> None:
+    server_id = "0b9b6f1e-2c1d-4c55-9a52-5d2f6a3f3a11"
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={CONF_HOST: "192.168.1.24", CONF_PORT: 8080, CONF_SSL: False, CONF_PASSWORD: "x"},
+        unique_id="192.168.1.24:8080",
+    )
+    entry.add_to_hass(hass)
+    no_healthz_lookup["192.168.1.24:8080"] = server_id  # what its own server answers
+    no_healthz_lookup["fd00::24:8080"] = server_id
+    info = _discovery(
+        "http://[fd00::24]:8080",
+        ip_address=ip_address("fd00::24"),
+        ip_addresses=[ip_address("fd00::24")],
+        hostname="other.local.",
+    )
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": SOURCE_ZEROCONF}, data=info
+    )
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "already_configured"
+    assert entry.unique_id == server_id

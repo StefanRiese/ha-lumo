@@ -4,6 +4,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning: [S
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-11-23
+
+### Fixed
+- Discovery recognised a server it already had only when the mDNS record carried the server's
+  id. It now asks the announced address for the id (`/healthz`) when the record has none, and
+  takes over the id for an entry that is still identified by its address. A server set up by its
+  IPv4 address is no longer offered again under its IPv6 address.
+
 ## [0.5.0] - 2026-11-23
 
 ### Fixed

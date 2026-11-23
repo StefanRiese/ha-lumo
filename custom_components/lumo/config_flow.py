@@ -106,6 +106,16 @@ def _is_ip(host: str) -> bool:
     return True
 
 
+async def fetch_server_id(host: str, port: int, ssl: bool) -> str | None:
+    """The id of the server at an address (`GET /healthz`, no login); None if it has none."""
+    async with aiohttp.ClientSession() as session:
+        client = LumoClient(session, base_url(host, port, ssl), "", timeout=5)
+        try:
+            return _server_id(await client.healthz())
+        except (LumoError, ValueError, AttributeError):
+            return None
+
+
 async def validate_connection(host: str, port: int, ssl: bool, password: str) -> Validated:
     """Checks that a Lumo server answers and accepts the password."""
     async with aiohttp.ClientSession(cookie_jar=aiohttp.CookieJar(unsafe=True)) as session:
@@ -185,6 +195,21 @@ class LumoConfigFlow(ConfigFlow, domain=DOMAIN):
         await self.async_set_unique_id(unique_id)
         self._abort_if_unique_id_configured()
 
+    async def _adopt_legacy_entry(self, server_id: str) -> None:
+        """An entry still identified by its address may be this very server: ask its server."""
+        entries = self._async_current_entries(include_ignore=False)
+        if any(e.unique_id == server_id for e in entries):
+            return
+        for entry in entries:
+            if not entry.unique_id or ":" not in entry.unique_id:  # not an address
+                continue
+            found = await fetch_server_id(
+                entry.data[CONF_HOST], entry.data[CONF_PORT], entry.data.get(CONF_SSL, False)
+            )
+            if found == server_id:
+                self.hass.config_entries.async_update_entry(entry, unique_id=server_id)
+                raise AbortFlow("already_configured")
+
     # --- new entry ------------------------------------------------------------------
 
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
@@ -231,6 +256,10 @@ class LumoConfigFlow(ConfigFlow, domain=DOMAIN):
         for entry in self._async_current_entries():
             if entry.data[CONF_PORT] == port and entry.data[CONF_HOST].strip("[]").lower() in names:
                 return self.async_abort(reason="already_configured")
+        # An announcement from before the server had an id: ask the server itself.
+        server_id = server_id or await fetch_server_id(host, port, False)
+        if server_id:
+            await self._adopt_legacy_entry(server_id)
         unique_id = server_id or legacy_unique_id(host, port)
         await self.async_set_unique_id(unique_id)
         entry = self.hass.config_entries.async_entry_for_domain_unique_id(DOMAIN, unique_id)
