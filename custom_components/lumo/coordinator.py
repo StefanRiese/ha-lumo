@@ -87,6 +87,9 @@ class LumoCoordinator(DataUpdateCoordinator[LumoData]):
         self.allow_homework_write = allow_homework_write
         self._features: set[str] | None = None
         self._pending: set[str] = set()
+        # Refresh and live-event flush must not run at once: both would compare against the
+        # same old data and announce the same new item twice.
+        self._update_lock = asyncio.Lock()
         self._flush_handle: asyncio.TimerHandle | None = None
         self._events_task: asyncio.Task[None] | None = None
         # When new or changed substitution entries were seen last (this run only).
@@ -117,6 +120,10 @@ class LumoCoordinator(DataUpdateCoordinator[LumoData]):
             return None
 
     async def _async_update_data(self) -> LumoData:
+        async with self._update_lock:
+            return await self._update_data()
+
+    async def _update_data(self) -> LumoData:
         previous = self.data or {}
         try:
             account = await self.client.get(self.account_id, ENDPOINTS["account"])
@@ -201,6 +208,10 @@ class LumoCoordinator(DataUpdateCoordinator[LumoData]):
 
     async def _flush_pending(self) -> None:
         self._flush_handle = None
+        async with self._update_lock:
+            await self._flush_locked()
+
+    async def _flush_locked(self) -> None:
         pending, self._pending = self._pending, set()
         if not pending or self.data is None:
             return

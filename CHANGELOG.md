@@ -4,6 +4,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning: [S
 
 ## [Unreleased]
 
+### Fixed
+- New homework could be announced twice (`lumo_new_item`) when a refresh and a live update ran at
+  the same time.
+
 ## [0.4.0] - 2026-11-20
 
 ### Added

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+
 import pytest
 from homeassistant.components.todo import TodoListEntityFeature
 from homeassistant.core import HomeAssistant
@@ -188,6 +190,26 @@ async def test_new_items_fire_events(
     await entry.runtime_data.coordinators["k3x9ab"].async_refresh()
     await hass.async_block_till_done()
     assert len(events) == count
+
+
+async def test_refresh_and_event_flush_announce_once(
+    hass: HomeAssistant,
+    fake: tuple[FakeLumo, str],
+    setup,  # noqa: F811
+) -> None:
+    """A poll and a live update running at the same time must not fire the event twice."""
+    server, _ = fake
+    server.data["homework"] = HOMEWORK[:1]
+    entry = await setup()
+    coordinator = entry.runtime_data.coordinators["k3x9ab"]
+    events = async_capture_events(hass, EVENT_NEW_ITEM)
+
+    server.data["homework"] = [*HOMEWORK, {**HOMEWORK[0], "entryId": "3", "topic": "Prozent"}]
+    coordinator._pending.add("homework")
+    await asyncio.gather(coordinator.async_refresh(), coordinator._flush_pending())
+    await hass.async_block_till_done()
+
+    assert [e.data["topic"] for e in events if e.data["kind"] == "homework"] == ["Prozent"]
 
 
 async def test_event_burst_is_capped(
