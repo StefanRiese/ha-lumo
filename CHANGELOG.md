@@ -5,8 +5,18 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning: [S
 ## [Unreleased]
 
 ### Fixed
-- New homework could be announced twice (`lumo_new_item`) when a refresh and a live update ran at
-  the same time.
+- A slow live update could overwrite what a refresh had found in the meantime, so the next
+  refresh announced the same new homework (`lumo_new_item`) a second time. Refreshes and live
+  updates now run one after the other.
+- Discovery no longer offers a server again when it is announced with its IPv6 address and
+  was set up with its IPv4 address (or the other way round). That created a second hub for the
+  same server, and every new item was announced twice.
+
+### Changed
+- A server is identified by its UUID (`id` in `GET /healthz` and in the mDNS record, Lumo
+  0.27 and later) instead of its address: the same server reached by another address (IPv4, IPv6,
+  name) is recognised when adding it, in discovery and when reconfiguring. Existing entries take
+  over the UUID when they are set up; older servers keep working by their address.
 
 ## [0.4.0] - 2026-11-20
 

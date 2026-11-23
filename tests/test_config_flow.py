@@ -36,7 +36,7 @@ def _conn(url: str, password: str = PASSWORD) -> dict:
     }
 
 
-def _entry(url: str, **options) -> MockConfigEntry:
+def _entry(url: str, *, unique_id: str | None = None, **options) -> MockConfigEntry:
     return MockConfigEntry(
         domain=DOMAIN,
         data=_conn(url),
@@ -46,7 +46,7 @@ def _entry(url: str, **options) -> MockConfigEntry:
             CONF_ALLOW_HOMEWORK_WRITE: False,
             **options,
         },
-        unique_id=f"{urlparse(url).hostname}:{urlparse(url).port}",
+        unique_id=unique_id or f"{urlparse(url).hostname}:{urlparse(url).port}",
         title="Lumo",
     )
 
@@ -173,6 +173,82 @@ async def test_user_flow_already_configured(
     await _unload(hass, entry)
 
 
+async def test_new_entry_is_identified_by_the_server_id(
+    hass: HomeAssistant, fake: tuple[FakeLumo, str]
+) -> None:
+    server, url = fake
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": SOURCE_USER})
+    result = await hass.config_entries.flow.async_configure(result["flow_id"], _conn(url))
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_ACCOUNTS: ["k3x9ab"]}
+    )
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["result"].unique_id == server.server_id
+    await hass.config_entries.async_unload(result["result"].entry_id)
+
+
+async def test_server_without_id_is_identified_by_its_address(
+    hass: HomeAssistant, fake: tuple[FakeLumo, str]
+) -> None:
+    server, url = fake
+    server.server_id = None  # a server older than Lumo 0.27
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": SOURCE_USER})
+    result = await hass.config_entries.flow.async_configure(result["flow_id"], _conn(url))
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_ACCOUNTS: ["k3x9ab"]}
+    )
+    parsed = urlparse(url)
+    assert result["result"].unique_id == f"{parsed.hostname}:{parsed.port}"
+    await hass.config_entries.async_unload(result["result"].entry_id)
+
+
+async def test_same_server_by_another_address_is_already_configured(
+    hass: HomeAssistant, fake: tuple[FakeLumo, str]
+) -> None:
+    server, url = fake
+    # set up under another address (say IPv6 or the name): same server id
+    MockConfigEntry(
+        domain=DOMAIN,
+        data={**_conn(url), CONF_HOST: "lumo.local"},
+        unique_id=server.server_id,
+        title="Lumo",
+    ).add_to_hass(hass)
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": SOURCE_USER})
+    result = await hass.config_entries.flow.async_configure(result["flow_id"], _conn(url))
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "already_configured"
+
+
+async def test_setup_adopts_the_server_id(hass: HomeAssistant, fake: tuple[FakeLumo, str]) -> None:
+    server, url = fake
+    entry = _entry(url)  # made before servers had an id: unique id is the address
+    entry.add_to_hass(hass)
+    await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    assert entry.unique_id == server.server_id
+    await _unload(hass, entry)
+
+
+async def test_setup_keeps_the_unique_id_of_a_duplicate(
+    hass: HomeAssistant, fake: tuple[FakeLumo, str]
+) -> None:
+    server, url = fake
+    first = _entry(url, unique_id=server.server_id)
+    first.add_to_hass(hass)
+    second = MockConfigEntry(
+        domain=DOMAIN,
+        data={**_conn(url), CONF_HOST: "localhost"},
+        options={CONF_ACCOUNTS: ["k3x9ab"]},
+        unique_id="localhost:1",
+        title="Lumo",
+    )
+    second.add_to_hass(hass)
+    await hass.config_entries.async_setup(second.entry_id)
+    await hass.async_block_till_done()
+    assert second.unique_id == "localhost:1"  # not changed to an id another entry has
+    await hass.config_entries.async_unload(second.entry_id)
+
+
 async def test_setup_with_wrong_password_starts_reauth(
     hass: HomeAssistant, fake: tuple[FakeLumo, str]
 ) -> None:
@@ -256,6 +332,23 @@ async def test_reconfigure_flow(hass: HomeAssistant, fake: tuple[FakeLumo, str])
     assert result["reason"] == "reconfigure_successful"
     await hass.async_block_till_done()
     await _unload(hass, entry)
+
+
+async def test_reconfigure_to_another_address_of_the_same_server(
+    hass: HomeAssistant, fake: tuple[FakeLumo, str]
+) -> None:
+    server, url = fake
+    entry = _entry(url, unique_id=server.server_id)
+    entry.add_to_hass(hass)
+    hass.config_entries.async_update_entry(
+        entry,
+        data={**entry.data, CONF_HOST: "lumo.invalid"},  # not reachable by this name
+    )
+    result = await entry.start_reconfigure_flow(hass)
+    result = await hass.config_entries.flow.async_configure(result["flow_id"], _conn(url))
+    assert result["reason"] == "reconfigure_successful"
+    assert entry.data[CONF_HOST] == urlparse(url).hostname
+    assert entry.unique_id == server.server_id
 
 
 async def test_options_flow_switches_and_reloads(
@@ -404,6 +497,74 @@ async def test_zeroconf_skips_server_set_up_by_name(
     )
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"
+
+
+async def test_zeroconf_skips_server_set_up_by_another_address(hass: HomeAssistant) -> None:
+    # set up with the IPv4 address, announced first with its IPv6 address
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={CONF_HOST: "192.168.1.50", CONF_PORT: 8080, CONF_SSL: False, CONF_PASSWORD: "x"},
+        unique_id="192.168.1.50:8080",
+    )
+    entry.add_to_hass(hass)
+    info = _discovery(
+        "http://192.168.1.50:8080",
+        ip_address=ip_address("fd00::50"),
+        ip_addresses=[ip_address("fd00::50"), ip_address("192.168.1.50")],
+        hostname="other.local.",
+    )
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": SOURCE_ZEROCONF}, data=info
+    )
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "already_configured"
+
+
+async def test_zeroconf_recognises_the_server_by_its_id(hass: HomeAssistant) -> None:
+    server_id = "0b9b6f1e-2c1d-4c55-9a52-5d2f6a3f3a11"
+    named = MockConfigEntry(
+        domain=DOMAIN,
+        data={CONF_HOST: "mylumo.home", CONF_PORT: 8080, CONF_SSL: False, CONF_PASSWORD: "x"},
+        unique_id=server_id,
+    )
+    named.add_to_hass(hass)
+    info = _discovery(
+        "http://192.168.1.60:8080",
+        ip_address=ip_address("fd00::60"),
+        ip_addresses=[ip_address("fd00::60"), ip_address("192.168.1.60")],
+        hostname="other.local.",
+        properties={"app": "lumo", "id": server_id},
+    )
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": SOURCE_ZEROCONF}, data=info
+    )
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "already_configured"
+    assert named.data[CONF_HOST] == "mylumo.home"  # a name typed in by hand is kept
+
+
+async def test_zeroconf_follows_the_ipv4_address_of_a_server_with_an_id(
+    hass: HomeAssistant,
+) -> None:
+    server_id = "0b9b6f1e-2c1d-4c55-9a52-5d2f6a3f3a11"
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={CONF_HOST: "192.168.1.50", CONF_PORT: 8080, CONF_SSL: False, CONF_PASSWORD: "x"},
+        unique_id=server_id,
+    )
+    entry.add_to_hass(hass)
+    info = _discovery(
+        "http://192.168.1.60:8080",
+        ip_address=ip_address("fd00::60"),
+        ip_addresses=[ip_address("fd00::60"), ip_address("192.168.1.60")],
+        hostname="other.local.",
+        properties={"app": "lumo", "id": server_id},
+    )
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": SOURCE_ZEROCONF}, data=info
+    )
+    assert result["reason"] == "already_configured"
+    assert entry.data[CONF_HOST] == "192.168.1.60"  # not the IPv6 address
 
 
 async def test_zeroconf_follows_a_new_address(hass: HomeAssistant) -> None:

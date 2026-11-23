@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import uuid
 from typing import Any
 
 from aiohttp import web
@@ -24,6 +25,8 @@ class FakeLumo:
 
     def __init__(self) -> None:
         self.sessions: set[str] = set()
+        # None = a server older than Lumo 0.27 (no identity)
+        self.server_id: str | None = str(uuid.uuid4())
         self.accounts = [
             {
                 "id": "k3x9ab",
@@ -143,7 +146,10 @@ class FakeLumo:
         return resp
 
     async def healthz(self, request: web.Request) -> web.Response:
-        return web.json_response({"status": "ok", "app": "lumo"})
+        body: dict[str, Any] = {"status": "ok", "app": "lumo"}
+        if self.server_id:
+            body["id"] = self.server_id
+        return web.json_response(body)
 
     async def list_accounts(self, request: web.Request) -> web.Response:
         if not self._authed(request):

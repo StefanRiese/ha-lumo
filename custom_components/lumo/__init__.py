@@ -23,6 +23,7 @@ from .const import (
     CONF_PORT,
     CONF_SSL,
     DEFAULT_PORT,
+    DOMAIN,
 )
 from .coordinator import LumoCoordinator, LumoStatusCoordinator
 from .entity import server_device
@@ -80,6 +81,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: LumoConfigEntry) -> bool
     except LumoError as err:  # connection, rate limit, setup required, …
         raise ConfigEntryNotReady(f"Lumo server not ready: {err}") from err
 
+    await _async_adopt_server_id(hass, entry, client)
+
     status_coordinator = LumoStatusCoordinator(hass, entry, client)
     await status_coordinator.async_refresh()  # a failure only makes the diagnostics unavailable
     runtime = LumoRuntimeData(client, status_coordinator, {a["id"]: a for a in accounts})
@@ -112,6 +115,26 @@ async def async_setup_entry(hass: HomeAssistant, entry: LumoConfigEntry) -> bool
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     entry.async_on_unload(entry.add_update_listener(_async_options_updated))
     return True
+
+
+async def _async_adopt_server_id(
+    hass: HomeAssistant, entry: LumoConfigEntry, client: LumoClient
+) -> None:
+    """Makes the UUID of the server the unique id of an entry made before servers had one."""
+    try:
+        server_id = (await client.healthz()).get("id")
+    except (LumoError, AttributeError):
+        return
+    if not isinstance(server_id, str) or not server_id or entry.unique_id == server_id:
+        return
+    if any(e.unique_id == server_id for e in hass.config_entries.async_entries(DOMAIN)):
+        _LOGGER.warning(
+            "Another Lumo entry already has the id of the server %s: it is set up twice, "
+            "remove one of the entries",
+            entry.data[CONF_HOST],
+        )
+        return
+    hass.config_entries.async_update_entry(entry, unique_id=server_id)
 
 
 async def _async_options_updated(hass: HomeAssistant, entry: LumoConfigEntry) -> None:

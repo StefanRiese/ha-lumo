@@ -192,21 +192,44 @@ async def test_new_items_fire_events(
     assert len(events) == count
 
 
-async def test_refresh_and_event_flush_announce_once(
+async def test_slow_live_update_does_not_bring_back_old_data(
     hass: HomeAssistant,
     fake: tuple[FakeLumo, str],
     setup,  # noqa: F811
 ) -> None:
-    """A poll and a live update running at the same time must not fire the event twice."""
+    """A live update that is still fetching must not overwrite what a refresh found meanwhile.
+
+    The overwritten data made the next refresh find the same new homework again and announce
+    it a second time.
+    """
     server, _ = fake
     server.data["homework"] = HOMEWORK[:1]
     entry = await setup()
     coordinator = entry.runtime_data.coordinators["k3x9ab"]
     events = async_capture_events(hass, EVENT_NEW_ITEM)
 
+    gate = asyncio.Event()
+    fetch = coordinator._fetch
+    slow = True
+
+    async def slow_fetch(key: str):
+        nonlocal slow
+        if key == "substitutions" and slow:  # only the live update is held up
+            slow = False
+            await gate.wait()
+        return await fetch(key)
+
+    coordinator._fetch = slow_fetch
+    coordinator._pending.add("substitutions")
+    flush = asyncio.create_task(coordinator._flush_pending())
+    await asyncio.sleep(0.05)  # the live update has taken its copy of the data
+
     server.data["homework"] = [*HOMEWORK, {**HOMEWORK[0], "entryId": "3", "topic": "Prozent"}]
-    coordinator._pending.add("homework")
-    await asyncio.gather(coordinator.async_refresh(), coordinator._flush_pending())
+    refresh = asyncio.create_task(coordinator.async_refresh())
+    await asyncio.sleep(0.3)
+    gate.set()
+    await asyncio.gather(flush, refresh)
+    await coordinator.async_refresh()  # the next poll
     await hass.async_block_till_done()
 
     assert [e.data["topic"] for e in events if e.data["kind"] == "homework"] == ["Prozent"]

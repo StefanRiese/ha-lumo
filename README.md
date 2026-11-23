@@ -43,6 +43,10 @@ as the mDNS service `_lumo._tcp`. Home Assistant then offers it under *Discovere
 enter the password. The desktop apps do not announce themselves, and mDNS does not cross
 VLANs: add the server by hand there.
 
+A server is recognised by its identity (a UUID that Lumo 0.27 and later reports), not by its
+address: adding it again by another address (IPv4, IPv6 or name) is refused as already set up.
+Older servers are recognised by their address.
+
 1. **Host, port, HTTPS and password** (manual setup) – the address of the Lumo server (e.g. `lumo.local`, port
    `8080`) and the password of its *web UI*. It is **not** the Schulportal password.
 2. **Children** – choose which children of the server appear in Home Assistant (skipped if the

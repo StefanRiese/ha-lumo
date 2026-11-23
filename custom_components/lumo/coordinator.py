@@ -87,8 +87,9 @@ class LumoCoordinator(DataUpdateCoordinator[LumoData]):
         self.allow_homework_write = allow_homework_write
         self._features: set[str] | None = None
         self._pending: set[str] = set()
-        # Refresh and live-event flush must not run at once: both would compare against the
-        # same old data and announce the same new item twice.
+        # A refresh and a live-event flush must not overlap: the flush works on a copy of the
+        # data and would overwrite what the refresh found meanwhile, so the next refresh
+        # announced the same new item again.
         self._update_lock = asyncio.Lock()
         self._flush_handle: asyncio.TimerHandle | None = None
         self._events_task: asyncio.Task[None] | None = None
