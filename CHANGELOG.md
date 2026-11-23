@@ -5,6 +5,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning: [S
 ## [Unreleased]
 
 ## [0.5.0] - 2026-11-23
+
 ### Fixed
 - A slow live update could overwrite what a refresh had found in the meantime, so the next
   refresh announced the same new homework (`lumo_new_item`) a second time. Refreshes and live
