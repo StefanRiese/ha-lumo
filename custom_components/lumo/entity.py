@@ -12,7 +12,7 @@ from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity, DataUpdateCoordinator
 
-from .const import CONF_HOST, DOMAIN
+from .const import DOMAIN
 from .coordinator import LumoCoordinator
 
 
@@ -20,7 +20,7 @@ def server_device(entry: ConfigEntry) -> DeviceInfo:
     """The Lumo server: parent of the children, carries the diagnostics."""
     return DeviceInfo(
         identifiers={(DOMAIN, entry.entry_id)},
-        name=f"Lumo ({entry.data[CONF_HOST]})",
+        name=entry.title,
         manufacturer="Lumo",
         entry_type=DeviceEntryType.SERVICE,
         # The identity of the server; an entry from before the ids still has its address here.

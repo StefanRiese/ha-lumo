@@ -4,11 +4,17 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning: [S
 
 ## [Unreleased]
 
-## [0.5.3] - 2026-11-27
+## [0.5.4] - 2026-11-27
 
 ### Added
 - The version of the Lumo server is shown on the device page of the server (Lumo 0.28 and
-  later).
+  later). (0.5.3 was tagged but never published: its tests failed.)
+
+### Fixed
+- The hub kept the address it was set up with in its name, while the server device showed the
+  address discovery had found later (for example IPv4 on the hub, IPv6 on the device). The device
+  now has the name of the hub, and the name follows when the server moves to another address
+  (discovery or reconfiguration). A name you chose yourself is kept.
 
 ## [0.5.2] - 2026-11-23
 

@@ -166,6 +166,20 @@ def _names(accounts: list[dict[str, Any]]) -> dict[str, str]:
     return {a["id"]: a.get("name") or a["id"] for a in accounts}
 
 
+def _default_title(host: str) -> str:
+    return f"Lumo ({host})"
+
+
+def _title_follows(entry: ConfigEntry, host: str) -> dict[str, str]:
+    """The new title for an entry that moves to another address (if it has the default title).
+
+    A title the user has chosen stays.
+    """
+    if entry.title == _default_title(entry.data[CONF_HOST]):
+        return {"title": _default_title(host)}
+    return {}
+
+
 class LumoConfigFlow(ConfigFlow, domain=DOMAIN):
     """Set up one Lumo server; the children to follow are chosen in a second step."""
 
@@ -265,8 +279,13 @@ class LumoConfigFlow(ConfigFlow, domain=DOMAIN):
         entry = self.hass.config_entries.async_entry_for_domain_unique_id(DOMAIN, unique_id)
         # The same server with a new address (DHCP): follow it. An entry typed in with a name
         # keeps its name.
-        updates = {CONF_HOST: host} if entry is None or _is_ip(entry.data[CONF_HOST]) else None
-        self._abort_if_unique_id_configured(updates=updates)
+        if entry is not None and _is_ip(entry.data[CONF_HOST]) and entry.data[CONF_HOST] != host:
+            self.hass.config_entries.async_update_entry(
+                entry,
+                data={**entry.data, CONF_HOST: host},
+                **_title_follows(entry, host),
+            )
+        self._abort_if_unique_id_configured()
         self._discovered = {CONF_HOST: host, CONF_PORT: port, CONF_SSL: False}
         self.context["title_placeholders"] = {"host": host}
         return await self.async_step_discovery_confirm()
@@ -315,7 +334,7 @@ class LumoConfigFlow(ConfigFlow, domain=DOMAIN):
     def _create(self, account_ids: list[str]) -> ConfigFlowResult:
         host = self._connection[CONF_HOST]
         return self.async_create_entry(
-            title=f"Lumo ({host})",
+            title=_default_title(host),
             data=self._connection,
             options={
                 CONF_ACCOUNTS: account_ids,
@@ -379,6 +398,7 @@ class LumoConfigFlow(ConfigFlow, domain=DOMAIN):
                     entry,
                     unique_id=new_id or entry.unique_id,
                     data_updates={**user_input, CONF_HOST: host},
+                    **_title_follows(entry, host),
                 )
         return self.async_show_form(
             step_id="reconfigure",

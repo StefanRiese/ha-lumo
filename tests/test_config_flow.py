@@ -233,6 +233,12 @@ async def test_setup_adopts_the_server_id(hass: HomeAssistant, fake: tuple[FakeL
     await _unload(hass, entry)
 
 
+def _server_device(hass: HomeAssistant, entry: MockConfigEntry) -> dr.DeviceEntry:
+    devices = dr.async_entries_for_config_entry(dr.async_get(hass), entry.entry_id)
+    (device,) = (d for d in devices if (DOMAIN, entry.entry_id) in d.identifiers)
+    return device
+
+
 async def test_server_device_shows_the_version(
     hass: HomeAssistant, fake: tuple[FakeLumo, str]
 ) -> None:
@@ -241,9 +247,9 @@ async def test_server_device_shows_the_version(
     entry.add_to_hass(hass)
     await hass.config_entries.async_setup(entry.entry_id)
     await hass.async_block_till_done()
-    device = dr.async_get(hass).async_get_device(identifiers={(DOMAIN, entry.entry_id)})
-    assert device is not None
+    device = _server_device(hass, entry)
     assert device.sw_version == "v0.28.0"
+    assert device.name == entry.title  # the same name as the hub
     await _unload(hass, entry)
 
 
@@ -256,9 +262,7 @@ async def test_server_device_without_version_from_an_older_server(
     entry.add_to_hass(hass)
     await hass.config_entries.async_setup(entry.entry_id)
     await hass.async_block_till_done()
-    device = dr.async_get(hass).async_get_device(identifiers={(DOMAIN, entry.entry_id)})
-    assert device is not None
-    assert device.sw_version is None
+    assert _server_device(hass, entry).sw_version is None
     await _unload(hass, entry)
 
 
@@ -599,6 +603,7 @@ async def test_zeroconf_follows_the_ipv4_address_of_a_server_with_an_id(
         domain=DOMAIN,
         data={CONF_HOST: "192.168.1.50", CONF_PORT: 8080, CONF_SSL: False, CONF_PASSWORD: "x"},
         unique_id=server_id,
+        title="Lumo (192.168.1.50)",
     )
     entry.add_to_hass(hass)
     info = _discovery(
@@ -613,6 +618,28 @@ async def test_zeroconf_follows_the_ipv4_address_of_a_server_with_an_id(
     )
     assert result["reason"] == "already_configured"
     assert entry.data[CONF_HOST] == "192.168.1.60"  # not the IPv6 address
+    assert entry.title == "Lumo (192.168.1.60)"  # the hub follows the address
+
+
+async def test_zeroconf_keeps_a_title_the_user_chose(hass: HomeAssistant) -> None:
+    server_id = "0b9b6f1e-2c1d-4c55-9a52-5d2f6a3f3a11"
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={CONF_HOST: "192.168.1.50", CONF_PORT: 8080, CONF_SSL: False, CONF_PASSWORD: "x"},
+        unique_id=server_id,
+        title="Lumo at home",
+    )
+    entry.add_to_hass(hass)
+    info = _discovery(
+        "http://192.168.1.60:8080",
+        hostname="other.local.",
+        properties={"app": "lumo", "id": server_id},
+    )
+    await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": SOURCE_ZEROCONF}, data=info
+    )
+    assert entry.data[CONF_HOST] == "192.168.1.60"
+    assert entry.title == "Lumo at home"
 
 
 async def test_zeroconf_follows_a_new_address(hass: HomeAssistant) -> None:

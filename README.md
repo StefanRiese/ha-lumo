@@ -108,7 +108,9 @@ Notes:
 ### Server device
 
 *Update available* (with `installed_version`, `latest_version`, `release_url`) and the connection
-of the services the server reports (notifications via ntfy, update server).
+of the services the server reports (notifications via ntfy, update server). The device page shows
+the server's identity (serial number) and, from Lumo 0.28, its version. The device has the name of
+the integration entry; the name follows the address when the server moves (a name you chose stays).
 
 ## Event `lumo_new_item`
 
