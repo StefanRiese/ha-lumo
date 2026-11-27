@@ -395,10 +395,10 @@ async def test_each_child_gets_a_device(hass: HomeAssistant, populated: FakeLumo
     entry = await setup(**{CONF_ACCOUNTS: ["k3x9ab", "p7q2mz"]})
     devices = dr.async_entries_for_config_entry(dr.async_get(hass), entry.entry_id)
     assert sorted(d.name for d in devices) == sorted(
-        ["Lumo Anna", "Lumo Max", f"Lumo ({entry.data[CONF_HOST]})"]
+        ["Lumo Anna", "Lumo Max", entry.title]  # the server device has the name of the hub
     )
     by_name = {d.name: d for d in devices}
-    server = by_name[f"Lumo ({entry.data[CONF_HOST]})"]
+    server = by_name[entry.title]
     assert by_name["Lumo Max"].via_device_id == server.id
     assert by_name["Lumo Anna"].via_device_id == server.id
 
