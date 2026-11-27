@@ -200,7 +200,9 @@ class LumoClient:
     # --- server-wide ----------------------------------------------------------------
 
     async def healthz(self) -> dict[str, Any]:
-        """`GET /healthz` (no login): `{"status": "ok", "app": "lumo"}`."""
+        """`GET /healthz` (no login): `{"status": "ok", "app": "lumo", "id": …, "version": …,
+        "setup": …}`; `id` needs Lumo 0.27, `version` (absent in development builds) and `setup`
+        (the server still waits for its setup page) need 0.28."""
         return await self._send("GET", "/healthz")
 
     async def accounts(self) -> list[dict[str, Any]]:

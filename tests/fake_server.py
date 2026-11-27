@@ -27,6 +27,7 @@ class FakeLumo:
         self.sessions: set[str] = set()
         # None = a server older than Lumo 0.27 (no identity)
         self.server_id: str | None = str(uuid.uuid4())
+        self.version: str | None = "v0.28.0"  # None: a server older than Lumo 0.28
         self.accounts = [
             {
                 "id": "k3x9ab",
@@ -149,6 +150,9 @@ class FakeLumo:
         body: dict[str, Any] = {"status": "ok", "app": "lumo"}
         if self.server_id:
             body["id"] = self.server_id
+        if self.version:
+            body["version"] = self.version
+            body["setup"] = False
         return web.json_response(body)
 
     async def list_accounts(self, request: web.Request) -> web.Response:

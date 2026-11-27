@@ -233,6 +233,35 @@ async def test_setup_adopts_the_server_id(hass: HomeAssistant, fake: tuple[FakeL
     await _unload(hass, entry)
 
 
+async def test_server_device_shows_the_version(
+    hass: HomeAssistant, fake: tuple[FakeLumo, str]
+) -> None:
+    server, url = fake
+    entry = _entry(url, unique_id=server.server_id)
+    entry.add_to_hass(hass)
+    await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    device = dr.async_get(hass).async_get_device(identifiers={(DOMAIN, entry.entry_id)})
+    assert device is not None
+    assert device.sw_version == "v0.28.0"
+    await _unload(hass, entry)
+
+
+async def test_server_device_without_version_from_an_older_server(
+    hass: HomeAssistant, fake: tuple[FakeLumo, str]
+) -> None:
+    server, url = fake
+    server.version = None  # older than Lumo 0.28
+    entry = _entry(url, unique_id=server.server_id)
+    entry.add_to_hass(hass)
+    await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    device = dr.async_get(hass).async_get_device(identifiers={(DOMAIN, entry.entry_id)})
+    assert device is not None
+    assert device.sw_version is None
+    await _unload(hass, entry)
+
+
 async def test_setup_keeps_the_unique_id_of_a_duplicate(
     hass: HomeAssistant, fake: tuple[FakeLumo, str]
 ) -> None:

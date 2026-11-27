@@ -81,7 +81,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: LumoConfigEntry) -> bool
     except LumoError as err:  # connection, rate limit, setup required, …
         raise ConfigEntryNotReady(f"Lumo server not ready: {err}") from err
 
-    await _async_adopt_server_id(hass, entry, client)
+    health = await _async_healthz(client)
+    await _async_adopt_server_id(hass, entry, health.get("id"))
 
     status_coordinator = LumoStatusCoordinator(hass, entry, client)
     await status_coordinator.async_refresh()  # a failure only makes the diagnostics unavailable
@@ -110,21 +111,32 @@ async def async_setup_entry(hass: HomeAssistant, entry: LumoConfigEntry) -> bool
         entry.async_on_unload(coordinator.stop_events)
 
     # The server device must exist before the children refer to it with via_device.
-    dr.async_get(hass).async_get_or_create(config_entry_id=entry.entry_id, **server_device(entry))
+    # The version is only known from Lumo 0.28 (and not in development builds).
+    version = health.get("version")
+    dr.async_get(hass).async_get_or_create(
+        config_entry_id=entry.entry_id,
+        **server_device(entry),
+        sw_version=version if isinstance(version, str) and version else None,
+    )
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     entry.async_on_unload(entry.add_update_listener(_async_options_updated))
     return True
 
 
+async def _async_healthz(client: LumoClient) -> dict[str, Any]:
+    """`GET /healthz`; empty if the server does not answer or answers something else."""
+    try:
+        health = await client.healthz()
+    except LumoError:
+        return {}
+    return health if isinstance(health, dict) else {}
+
+
 async def _async_adopt_server_id(
-    hass: HomeAssistant, entry: LumoConfigEntry, client: LumoClient
+    hass: HomeAssistant, entry: LumoConfigEntry, server_id: object
 ) -> None:
     """Makes the UUID of the server the unique id of an entry made before servers had one."""
-    try:
-        server_id = (await client.healthz()).get("id")
-    except (LumoError, AttributeError):
-        return
     if not isinstance(server_id, str) or not server_id or entry.unique_id == server_id:
         return
     if any(e.unique_id == server_id for e in hass.config_entries.async_entries(DOMAIN)):
