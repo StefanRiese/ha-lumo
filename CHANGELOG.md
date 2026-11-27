@@ -4,6 +4,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning: [S
 
 ## [Unreleased]
 
+## [0.5.3] - 2026-11-27
+
 ### Added
 - The version of the Lumo server is shown on the device page of the server (Lumo 0.28 and
   later).
